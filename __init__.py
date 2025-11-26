@@ -320,5 +320,12 @@ def load(app):
     - Provide an admin UI at /admin/ctfd_notifier to configure Telegram
       bot token, chat ID, and enabled flag.
     """
+    logger.info("ctfd_notifier: load() called, wrapping 'standard' and attempting to wrap 'dynamic' challenge create, then registering admin blueprint")
     _wrap_standard_challenge_create(app)
     _register_admin_blueprint(app)
+
+    # Also log available challenge classes for debugging dynamic types
+    try:
+        logger.info("ctfd_notifier: Available CHALLENGE_CLASSES keys: %s", list(CHALLENGE_CLASSES.keys()))
+    except Exception:
+        pass
