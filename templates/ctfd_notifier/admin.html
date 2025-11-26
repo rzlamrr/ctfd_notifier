@@ -54,6 +54,19 @@
       </small>
     </div>
 
+    <div class="form-group mb-3">
+      <label for="message_template">Notification message template</label>
+      <small class="form-text text-muted">
+        Use <code>{name}</code>, <code>{category}</code>, and <code>{value}</code> as placeholders.
+      </small>
+      <textarea
+        class="form-control"
+        id="message_template"
+        name="message_template"
+        rows="3"
+      >{{ message_template }}</textarea>
+    </div>
+
     <button type="submit" class="btn btn-primary">
       Save settings
     </button>

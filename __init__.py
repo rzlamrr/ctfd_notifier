@@ -9,6 +9,8 @@ from CTFd.models import db
 from CTFd.plugins.challenges import CHALLENGE_CLASSES
 from CTFd.utils import config, get_config, set_config
 
+DEFAULT_MESSAGE_TEMPLATE = "*New challenge created*\nName: `{name}`\nCategory: `{category}`\nValue: `{value}`"
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -163,23 +165,45 @@ def notify_on_challenge_create(
                 if message_builder is not None:
                     text = message_builder(challenge)
                 else:
-                    # Generic default message
+                    # Generic default message, configurable via admin UI
                     name = getattr(challenge, "name", "Unknown")
                     category = getattr(challenge, "category", "Uncategorized")
                     value = getattr(challenge, "value", None)
 
+                    template = (
+                        get_config("ctfd_notifier_message_template")
+                        or DEFAULT_MESSAGE_TEMPLATE
+                    )
+                    # Avoid showing "None" for value; replace missing value with empty string
+                    safe_value = value if value is not None else ""
+
+                    # Support both {name} and {challenge} as placeholders
+                    try:
+                        text = template.format(
+                            name=name,
+                            challenge=name,
+                            category=category,
+                            value=safe_value,
+                        )
+                    except Exception as fmt_err:
+                        # Fallback to a safe default and log the formatting error
+                        current_app.logger.warning(
+                            "ctfd_notifier: template format error (%s): %s; using default template",
+                            type(fmt_err).__name__,
+                            fmt_err,
+                        )
+                        fallback = DEFAULT_MESSAGE_TEMPLATE
+                        text = fallback.format(
+                            name=name,
+                            challenge=name,
+                            category=category,
+                            value=safe_value,
+                        )
+
                     # URL_ROOT is optional; best-effort
                     url_root = current_app.config.get("URL_ROOT", "").rstrip("/")
-
-                    text = (
-                        "*New challenge created*\n"
-                        f"Name: `{name}`\n"
-                        f"Category: `{category}`\n"
-                    )
-                    if value is not None:
-                        text += f"Value: `{value}`\n"
                     if url_root:
-                        text += f"\nAdmin: {url_root}/admin/challenges"
+                        text += f"\n\nAdmin: {url_root}/admin/challenges"
 
                 send_telegram_message(text)
             except Exception as e:  # noqa: BLE001
@@ -277,10 +301,12 @@ def _register_admin_blueprint(app):
             enabled = request.form.get("enabled", "off")
             bot_token = request.form.get("bot_token", "").strip()
             chat_id = request.form.get("chat_id", "").strip()
+            message_template = request.form.get("message_template", "").strip()
 
             set_config("ctfd_notifier_telegram_enabled", enabled)
             set_config("ctfd_notifier_telegram_bot_token", bot_token)
             set_config("ctfd_notifier_telegram_chat_id", chat_id)
+            set_config("ctfd_notifier_message_template", message_template or DEFAULT_MESSAGE_TEMPLATE)
 
             db.session.commit()
             flash("CTFd Notifier settings updated", "success")
@@ -291,12 +317,14 @@ def _register_admin_blueprint(app):
         enabled = str(enabled_raw).lower() in {"1", "true", "yes", "on", "on"}
         bot_token = get_config("ctfd_notifier_telegram_bot_token") or ""
         chat_id = get_config("ctfd_notifier_telegram_chat_id") or ""
+        message_template = get_config("ctfd_notifier_message_template") or DEFAULT_MESSAGE_TEMPLATE
 
         return render_template(
             "ctfd_notifier/admin.html",
             enabled=enabled,
             bot_token=bot_token,
             chat_id=chat_id,
+            message_template=message_template,
             nonce=session.get("nonce", ""),
         )
 
