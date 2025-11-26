@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}
+
+{% block title %}CTFd Notifier{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">CTFd Notifier</h1>
+
+  <form method="POST" action="" autocomplete="off" class="w-100">
+    <input type="hidden" name="nonce" value="{{ nonce }}">
+
+    <div class="form-group form-check mb-3">
+      <input
+        type="checkbox"
+        class="form-check-input"
+        id="enabled"
+        name="enabled"
+        value="on"
+        {% if enabled %}checked{% endif %}
+      >
+      <label class="form-check-label" for="enabled">
+        Enable Telegram notifications
+      </label>
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="bot_token">Telegram Bot Token</label>
+      <input
+        type="text"
+        class="form-control"
+        id="bot_token"
+        name="bot_token"
+        value="{{ bot_token }}"
+        autocomplete="off"
+      >
+      <small class="form-text text-muted">
+        Bot token from @BotFather (e.g. <code>123456789:ABCDEF...</code>).
+      </small>
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="chat_id">Telegram Chat ID</label>
+      <input
+        type="text"
+        class="form-control"
+        id="chat_id"
+        name="chat_id"
+        value="{{ chat_id }}"
+        autocomplete="off"
+      >
+      <small class="form-text text-muted">
+        Chat ID (user, group, or channel). You can use bots like
+        <code>@userinfobot</code> to discover it.
+      </small>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      Save settings
+    </button>
+  </form>
+
+  <hr class="my-4">
+
+  <h5>How it works</h5>
+  <ul>
+    <li>When enabled, creating a new challenge of type <code>standard</code> sends a Telegram message.</li>
+    <li>Other plugins can decorate their <code>BaseChallenge.create</code> with
+      <code>notify_on_challenge_create</code> from this plugin.</li>
+    <li>Environment variables can still override values if needed.</li>
+  </ul>
+</div>
+{% endblock %}
