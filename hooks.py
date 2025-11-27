@@ -96,7 +96,7 @@ def wrap_solve(cls):
             if url_root:
                 text += f"\n\nChallenge: {url_root}/challenges#{name}-{challenge.id}"
 
-            send_telegram_message(text)
+            send_telegram_message(text, thread_config_key="ctfd_notifier_solve_thread_id")
         except Exception:
             # Never break solves on notification errors
             pass
@@ -172,7 +172,7 @@ def _wrap_challenge_update(app, type_id: str) -> None:
                     if url_root:
                         text += f"\n\nAdmin: {url_root}/admin/challenges"
 
-                    send_telegram_message(text)
+                    send_telegram_message(text, thread_config_key="ctfd_notifier_challenge_thread_id")
                 except Exception as e:  # noqa: BLE001
                     try:
                         current_app.logger.warning(

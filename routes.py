@@ -39,6 +39,8 @@ def register_admin_blueprint(app) -> None:
             solve_template = request.form.get("solve_template", "").strip()
             first_blood_template = request.form.get("first_blood_template", "").strip()
             solve_limit = request.form.get("solve_limit", "").strip()
+            challenge_thread_id = request.form.get("challenge_thread_id", "").strip()
+            solve_thread_id = request.form.get("solve_thread_id", "").strip()
 
             set_config("ctfd_notifier_telegram_enabled", enabled)
             set_config("ctfd_notifier_challenge_enabled", enable_challenge)
@@ -52,6 +54,8 @@ def register_admin_blueprint(app) -> None:
             set_config("ctfd_notifier_solve_template", solve_template)
             set_config("ctfd_notifier_solve_first_blood_template", first_blood_template)
             set_config("ctfd_notifier_solve_limit", solve_limit)
+            set_config("ctfd_notifier_challenge_thread_id", challenge_thread_id)
+            set_config("ctfd_notifier_solve_thread_id", solve_thread_id)
 
             db.session.commit()
             flash("CTFd Notifier settings updated", "success")
@@ -74,6 +78,8 @@ def register_admin_blueprint(app) -> None:
             or "🩸 First Blood! ⚡️\n{user} solved {challenge}"
         )
         solve_limit = get_config("ctfd_notifier_solve_limit") or ""
+        challenge_thread_id = get_config("ctfd_notifier_challenge_thread_id") or ""
+        solve_thread_id = get_config("ctfd_notifier_solve_thread_id") or ""
 
         return render_template(
             "admin.html",
@@ -86,6 +92,8 @@ def register_admin_blueprint(app) -> None:
             solve_template=solve_template,
             first_blood_template=first_blood_template,
             solve_limit=solve_limit,
+            challenge_thread_id=challenge_thread_id,
+            solve_thread_id=solve_thread_id,
             nonce=session.get("nonce", ""),
         )
 

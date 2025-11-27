@@ -63,7 +63,7 @@ class TelegramConfig:
         return self.enabled and bool(self.bot_token) and bool(self.chat_id)
 
 
-def send_telegram_message(text: str) -> None:
+def send_telegram_message(text: str, *, thread_config_key: str | None = None) -> None:
     cfg = TelegramConfig.from_app()
     if not cfg.is_valid():
         logger.info(
@@ -83,6 +83,17 @@ def send_telegram_message(text: str) -> None:
             "parse_mode": "Markdown",
             "disable_web_page_preview": True,
         }
+
+        # Optional topic/thread ID support
+        if thread_config_key:
+            thread_raw = get_config(thread_config_key)
+            try:
+                thread_id = int(thread_raw) if thread_raw not in (None, "") else None
+            except (TypeError, ValueError):
+                thread_id = None
+
+            if thread_id is not None:
+                payload["message_thread_id"] = thread_id
         resp = requests.post(url, json=payload, timeout=3)
         logger.info(
             "ctfd_notifier: Telegram API response status=%s body=%s",
