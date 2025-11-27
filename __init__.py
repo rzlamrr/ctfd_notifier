@@ -1,7 +1,7 @@
 import logging
 
 from .routes import register_admin_blueprint
-from .hooks import wrap_standard_challenge_update
+from .hooks import wrap_standard_challenge_update, wrap_solve
 
 logger = logging.getLogger(__name__)
 

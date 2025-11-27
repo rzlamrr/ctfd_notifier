@@ -1,0 +1,141 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>CTFd Notifier</h1>
+    <p class="lead mb-0">
+      Configure Telegram notifications for new challenges and solves.
+    </p>
+  </div>
+</div>
+
+<div class="container mt-4">
+  <form method="POST" class="mb-4">
+    <input type="hidden" name="nonce" value="{{ nonce }}">
+
+    <!-- Global enable & Telegram settings -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>Telegram Connection</strong>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="enabled" name="enabled" value="on"
+                   {% if enabled %}checked{% endif %}>
+            <label class="form-check-label" for="enabled">
+              Enable Telegram notifications
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            When disabled, no messages will be sent even if other options are enabled.
+          </small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="bot_token">Bot Token</label>
+            <input type="text" class="form-control" id="bot_token" name="bot_token" value="{{ bot_token }}">
+            <small class="form-text text-muted">
+              Token for your Telegram bot, e.g. <code>123456:ABC-DEF...</code>.
+            </small>
+          </div>
+          <div class="form-group col-md-6">
+            <label for="chat_id">Chat ID</label>
+            <input type="text" class="form-control" id="chat_id" name="chat_id" value="{{ chat_id }}">
+            <small class="form-text text-muted">
+              Target chat ID or channel ID where notifications will be sent.
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Challenge creation notifications -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>Challenge Creation Notifications</strong>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="enable_challenge" name="enable_challenge" value="on"
+                   {% if challenge_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="enable_challenge">
+              Enable challenge creation notifications
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            Sends a message when a challenge becomes visible (after configuration is finished).
+          </small>
+        </div>
+
+        <div class="form-group mb-0">
+          <label for="message_template">Creation message template</label>
+          <textarea class="form-control" id="message_template" name="message_template" rows="3">{{ message_template }}</textarea>
+          <small class="form-text text-muted">
+            Default: <code>*New challenge created*\nName: `{name}`\nCategory: `{category}`\nValue: `{value}`</code><br>
+            Placeholders: <code>{name}</code>, <code>{challenge}</code>, <code>{category}</code>, <code>{value}</code>
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Solve notifications -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>Solve Notifications</strong>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="enable_solves" name="enable_solves" value="on"
+                   {% if solves_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="enable_solves">
+              Enable solve notifications
+            </label>
+          </div>
+          <small class="form-text text-muted">
+            Sends a message every time a challenge is solved, up to the configured limit.
+          </small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="first_blood_template">First blood template</label>
+            <textarea class="form-control" id="first_blood_template" name="first_blood_template" rows="2">{{ first_blood_template }}</textarea>
+            <small class="form-text text-muted">
+              Default: <code>🩸 First Blood! ⚡️\n{user} solved {challenge}</code><br>
+              Placeholders: <code>{user}</code>, <code>{challenge}</code>
+            </small>
+          </div>
+
+          <div class="form-group col-md-6">
+            <label for="solve_template">Solve template</label>
+            <textarea class="form-control" id="solve_template" name="solve_template" rows="2">{{ solve_template }}</textarea>
+            <small class="form-text text-muted">
+              Default: <code>{user} solved {challenge} ({num})</code><br>
+              Placeholders: <code>{user}</code>, <code>{challenge}</code>, <code>{num}</code> (solve position)
+            </small>
+          </div>
+        </div>
+
+        <div class="form-group mb-0">
+          <label for="solve_limit">Solve notification limit</label>
+          <input type="number" class="form-control" id="solve_limit" name="solve_limit" value="{{ solve_limit }}" min="1">
+          <small class="form-text text-muted">
+            Maximum number of solves to notify per challenge. Leave blank for no limit.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-right mb-5">
+      <button type="submit" class="btn btn-primary">
+        Save Notifier Settings
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

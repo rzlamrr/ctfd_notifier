@@ -31,17 +31,27 @@ def register_admin_blueprint(app) -> None:
                 return redirect(url_for("admin.view_settings"))
 
             enabled = request.form.get("enabled", "off")
+            enable_challenge = request.form.get("enable_challenge", "off")
+            enable_solves = request.form.get("enable_solves", "off")
             bot_token = request.form.get("bot_token", "").strip()
             chat_id = request.form.get("chat_id", "").strip()
             message_template = request.form.get("message_template", "").strip()
+            solve_template = request.form.get("solve_template", "").strip()
+            first_blood_template = request.form.get("first_blood_template", "").strip()
+            solve_limit = request.form.get("solve_limit", "").strip()
 
             set_config("ctfd_notifier_telegram_enabled", enabled)
+            set_config("ctfd_notifier_challenge_enabled", enable_challenge)
+            set_config("ctfd_notifier_solves_enabled", enable_solves)
             set_config("ctfd_notifier_telegram_bot_token", bot_token)
             set_config("ctfd_notifier_telegram_chat_id", chat_id)
             set_config(
                 "ctfd_notifier_message_template",
                 message_template or DEFAULT_MESSAGE_TEMPLATE,
             )
+            set_config("ctfd_notifier_solve_template", solve_template)
+            set_config("ctfd_notifier_solve_first_blood_template", first_blood_template)
+            set_config("ctfd_notifier_solve_limit", solve_limit)
 
             db.session.commit()
             flash("CTFd Notifier settings updated", "success")
@@ -49,18 +59,33 @@ def register_admin_blueprint(app) -> None:
 
         enabled_raw = get_config("ctfd_notifier_telegram_enabled") or "off"
         enabled = str(enabled_raw).lower() in {"1", "true", "yes", "on", "on"}
+        challenge_enabled_raw = get_config("ctfd_notifier_challenge_enabled") or "off"
+        challenge_enabled = str(challenge_enabled_raw).lower() in {"1", "true", "yes", "on"}
+        solves_enabled_raw = get_config("ctfd_notifier_solves_enabled") or "off"
+        solves_enabled = str(solves_enabled_raw).lower() in {"1", "true", "yes", "on"}
         bot_token = get_config("ctfd_notifier_telegram_bot_token") or ""
         chat_id = get_config("ctfd_notifier_telegram_chat_id") or ""
         message_template = (
             get_config("ctfd_notifier_message_template") or DEFAULT_MESSAGE_TEMPLATE
         )
+        solve_template = get_config("ctfd_notifier_solve_template") or "{user} solved {challenge} ({num})"
+        first_blood_template = (
+            get_config("ctfd_notifier_solve_first_blood_template")
+            or "🩸 First Blood! ⚡️\n{user} solved {challenge}"
+        )
+        solve_limit = get_config("ctfd_notifier_solve_limit") or ""
 
         return render_template(
-            "ctfd_notifier/admin.html",
+            "admin.html",
             enabled=enabled,
+            challenge_enabled=challenge_enabled,
+            solves_enabled=solves_enabled,
             bot_token=bot_token,
             chat_id=chat_id,
             message_template=message_template,
+            solve_template=solve_template,
+            first_blood_template=first_blood_template,
+            solve_limit=solve_limit,
             nonce=session.get("nonce", ""),
         )
 

@@ -13,6 +13,100 @@ from .utils import DEFAULT_MESSAGE_TEMPLATE, send_telegram_message
 logger = logging.getLogger(__name__)
 
 
+def wrap_solve(cls):
+    """Class decorator to wrap BaseChallenge.solve and send a Telegram notification."""
+
+    original = getattr(cls, "solve", None)
+    if original is None:
+        return cls
+
+    func = getattr(original, "__func__", original)
+
+    def solve_wrapper(chal_cls, user, team, challenge, request, *args, **kwargs):
+        result = func(chal_cls, user, team, challenge, request, *args, **kwargs)
+
+        try:
+            from CTFd.models import Solves, db  # local import to avoid cycles
+
+            name = getattr(challenge, "name", "Unknown")
+
+            # Compute solve position for this challenge (1-based)
+            solve_count = (
+                db.session.query(db.func.count(Solves.id))
+                .filter(Solves.challenge_id == getattr(challenge, "id", None))
+                .scalar()
+            ) or 0
+
+            user_name = getattr(user, "name", "Unknown")
+
+            # Respect max solve notifications limit, if set
+            max_solves_raw = get_config("ctfd_notifier_solve_limit")
+            try:
+                max_solves = int(max_solves_raw) if max_solves_raw not in (None, "") else None
+            except (TypeError, ValueError):
+                max_solves = None
+
+            if max_solves is not None and solve_count > max_solves:
+                return result
+
+            # Skip entirely if solves notifications are disabled
+            solves_enabled_raw = get_config("ctfd_notifier_solves_enabled") or "off"
+            solves_enabled = str(solves_enabled_raw).lower() in {"1", "true", "yes", "on"}
+            if not solves_enabled:
+                return result
+
+            # First Blood special message
+            if solve_count == 1:
+                template = get_config("ctfd_notifier_solve_first_blood_template") or (
+                    "🩸 First Blood! ⚡️\n{user} solved {challenge}"
+                )
+                try:
+                    text = template.format(user=user_name, challenge=name)
+                except Exception as fmt_err:
+                    current_app.logger.warning(
+                        "ctfd_notifier: first blood template format error (%s): %s; using default",
+                        type(fmt_err).__name__,
+                        fmt_err,
+                    )
+                    fallback = "🩸 First Blood! ⚡️\n{user} solved {challenge}"
+                    text = fallback.format(user=user_name, challenge=name)
+            else:
+                template = get_config("ctfd_notifier_solve_template") or "{user} solved {challenge} ({num})"
+
+                try:
+                    text = template.format(
+                        user=user_name,
+                        challenge=name,
+                        num=solve_count,
+                    )
+                except Exception as fmt_err:
+                    current_app.logger.warning(
+                        "ctfd_notifier: solve template format error (%s): %s; using default solve template",
+                        type(fmt_err).__name__,
+                        fmt_err,
+                    )
+                    fallback = "{user} solved {challenge} ({num})"
+                    text = fallback.format(
+                        user=user_name,
+                        challenge=name,
+                        num=solve_count,
+                    )
+
+            url_root = current_app.config.get("URL_ROOT", "").rstrip("/")
+            if url_root:
+                text += f"\n\nChallenge: {url_root}/challenges#{name}-{challenge.id}"
+
+            send_telegram_message(text)
+        except Exception:
+            # Never break solves on notification errors
+            pass
+
+        return result
+
+    cls.solve = classmethod(solve_wrapper)
+    return cls
+
+
 def _wrap_challenge_update(app, type_id: str) -> None:
     """Wrap a challenge type's update() method to notify when it becomes visible."""
     try:
