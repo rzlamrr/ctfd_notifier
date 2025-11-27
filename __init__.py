@@ -16,7 +16,13 @@ def load(app):
     - Wraps the standard challenge solve() so static solves send notifications.
     - Registers the admin configuration blueprint.
     """
-    logger.debug("ctfd_notifier: load() called, wrapping 'standard' challenge update()/solve() and registering admin blueprint")
+    from CTFd.utils import get_config
+
+    debug_raw = get_config("ctfd_notifier_debug_enabled") or "off"
+    debug_enabled = str(debug_raw).lower() in {"1", "true", "yes", "on"}
+
+    if debug_enabled:
+        logger.debug("ctfd_notifier: load() called, wrapping 'standard' challenge update()/solve() and registering admin blueprint")
 
     wrap_standard_challenge_update(app)
 
@@ -25,9 +31,10 @@ def load(app):
         standard_cls = CHALLENGE_CLASSES.get("standard")
         if standard_cls is not None:
             wrap_solve(standard_cls)
-        else:
-            logger.warning("ctfd_notifier: 'standard' challenge class not found when trying to wrap solve()")
+        elif debug_enabled:
+            logger.debug("ctfd_notifier: 'standard' challenge class not found when trying to wrap solve()")
     except Exception as e:
-        logger.warning("ctfd_notifier: failed to wrap standard challenge solve(): %s", e)
+        if debug_enabled:
+            logger.debug("ctfd_notifier: failed to wrap standard challenge solve(): %s", e)
 
     register_admin_blueprint(app)

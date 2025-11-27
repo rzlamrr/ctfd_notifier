@@ -33,6 +33,7 @@ def register_admin_blueprint(app) -> None:
             enabled = request.form.get("enabled", "off")
             enable_challenge = request.form.get("enable_challenge", "off")
             enable_solves = request.form.get("enable_solves", "off")
+            debug_enabled = request.form.get("debug_enabled", "off")
             bot_token = request.form.get("bot_token", "").strip()
             chat_id = request.form.get("chat_id", "").strip()
             message_template = request.form.get("message_template", "").strip()
@@ -45,6 +46,7 @@ def register_admin_blueprint(app) -> None:
             set_config("ctfd_notifier_telegram_enabled", enabled)
             set_config("ctfd_notifier_challenge_enabled", enable_challenge)
             set_config("ctfd_notifier_solves_enabled", enable_solves)
+            set_config("ctfd_notifier_debug_enabled", debug_enabled)
             set_config("ctfd_notifier_telegram_bot_token", bot_token)
             set_config("ctfd_notifier_telegram_chat_id", chat_id)
             set_config(
@@ -67,6 +69,8 @@ def register_admin_blueprint(app) -> None:
         challenge_enabled = str(challenge_enabled_raw).lower() in {"1", "true", "yes", "on"}
         solves_enabled_raw = get_config("ctfd_notifier_solves_enabled") or "off"
         solves_enabled = str(solves_enabled_raw).lower() in {"1", "true", "yes", "on"}
+        debug_enabled_raw = get_config("ctfd_notifier_debug_enabled") or "off"
+        debug_enabled = str(debug_enabled_raw).lower() in {"1", "true", "yes", "on"}
         bot_token = get_config("ctfd_notifier_telegram_bot_token") or ""
         chat_id = get_config("ctfd_notifier_telegram_chat_id") or ""
         message_template = (
@@ -86,6 +90,7 @@ def register_admin_blueprint(app) -> None:
             enabled=enabled,
             challenge_enabled=challenge_enabled,
             solves_enabled=solves_enabled,
+            debug_enabled=debug_enabled,
             bot_token=bot_token,
             chat_id=chat_id,
             message_template=message_template,
