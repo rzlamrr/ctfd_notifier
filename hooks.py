@@ -5,9 +5,7 @@ from typing import Any, Callable
 
 from flask import current_app
 
-from CTFd.plugins.challenges import CHALLENGE_CLASSES, BaseChallenge
-
-from CTFd.plugins.challenges import BaseChallenge
+from CTFd.plugins.challenges import CHALLENGE_CLASSES
 from CTFd.utils import get_config
 
 from .utils import DEFAULT_MESSAGE_TEMPLATE, send_telegram_message
@@ -15,32 +13,28 @@ from .utils import DEFAULT_MESSAGE_TEMPLATE, send_telegram_message
 logger = logging.getLogger(__name__)
 
 
-def wrap_standard_challenge_update(app) -> None:
-    """Wrap the existing 'standard' challenge class's update() method.
-
-    We send a notification only when the challenge transitions to a visible
-    state so that admins finish configuring it first.
-    """
+def _wrap_challenge_update(app, type_id: str) -> None:
+    """Wrap a challenge type's update() method to notify when it becomes visible."""
     try:
-        logger.info("ctfd_notifier: attempting to wrap 'standard' challenge update()")
-        standard_cls = CHALLENGE_CLASSES.get("standard")
-        if standard_cls is None:
+        logger.info("ctfd_notifier: attempting to wrap '%s' challenge update()", type_id)
+        chal_cls = CHALLENGE_CLASSES.get(type_id)
+        if chal_cls is None:
             app.logger.warning(
-                "ctfd_notifier: 'standard' challenge class not found; "
-                "no automatic notifications will be attached.",
+                "ctfd_notifier: '%s' challenge class not found; no automatic notifications will be attached.",
+                type_id,
             )
             return
 
-        original_update = getattr(standard_cls, "update", None)
-        logger.info("ctfd_notifier: original 'standard' update method: %r", original_update)
+        original_update = getattr(chal_cls, "update", None)
+        logger.info("ctfd_notifier: original '%s' update method: %r", type_id, original_update)
         if original_update is None:
             app.logger.warning(
-                "ctfd_notifier: 'standard' challenge class has no update() method."
+                "ctfd_notifier: '%s' challenge class has no update() method.", type_id
             )
             return
 
         func = getattr(original_update, "__func__", original_update)
-        logger.info("ctfd_notifier: underlying 'standard' update function: %r", func)
+        logger.info("ctfd_notifier: underlying '%s' update function: %r", type_id, func)
 
         def wrapper(cls, challenge, request, *args, **kwargs):
             old_state = getattr(challenge, "state", None)
@@ -100,15 +94,30 @@ def wrap_standard_challenge_update(app) -> None:
         wrapper.__doc__ = getattr(func, "__doc__", None)
         wrapper.__wrapped__ = func  # type: ignore[attr-defined]
 
-        setattr(standard_cls, "update", classmethod(wrapper))
+        setattr(chal_cls, "update", classmethod(wrapper))
 
         app.logger.info(
-            "ctfd_notifier: wrapped 'standard' challenge update() with Telegram notifier"
+            "ctfd_notifier: wrapped '%s' challenge update() with Telegram notifier",
+            type_id,
         )
     except Exception as e:  # noqa: BLE001
         try:
             app.logger.warning(
-                "ctfd_notifier: failed to wrap standard challenge update(): %s", e
+                "ctfd_notifier: failed to wrap %s challenge update(): %s", type_id, e
             )
         except Exception:
             pass
+
+
+def wrap_standard_challenge_update(app) -> None:
+    """Wrap standard challenge update() to send notifications.
+
+    Dynamic challenge will be wrapped separately after it is registered
+    by the dynamic_challenges plugin.
+    """
+    _wrap_challenge_update(app, "standard")
+
+
+def wrap_dynamic_challenge_update(app) -> None:
+    """Public helper to wrap dynamic challenge update() once available."""
+    _wrap_challenge_update(app, "dynamic")

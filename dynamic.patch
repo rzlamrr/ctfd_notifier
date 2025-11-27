@@ -1,55 +1,22 @@
 diff --git a/CTFd/plugins/dynamic_challenges/__init__.py b/CTFd/plugins/dynamic_challenges/__init__.py
-index 45f51e38..73a9c375 100644
+index 45f51e38..1f4971a3 100644
 --- a/CTFd/plugins/dynamic_challenges/__init__.py
 +++ b/CTFd/plugins/dynamic_challenges/__init__.py
-@@ -10,6 +10,14 @@ from CTFd.plugins.challenges import CHALLENGE_CLASSES, BaseChallenge
+@@ -9,6 +9,7 @@ from CTFd.plugins import register_plugin_assets_directory
+ from CTFd.plugins.challenges import CHALLENGE_CLASSES, BaseChallenge
  from CTFd.plugins.dynamic_challenges.decay import DECAY_FUNCTIONS, logarithmic
  from CTFd.plugins.migrations import upgrade
++from CTFd.plugins.ctfd_notifier.hooks import wrap_dynamic_challenge_update
  
-+# Optional integration with ctfd_notifier plugin
-+try:
-+    # When the ctfd_notifier plugin is installed, this decorator will be used
-+    # to send Telegram notifications when dynamic challenges are created.
-+    from CTFd.plugins.ctfd_notifier import notify_on_challenge_create  # type: ignore[attr-defined]
-+except Exception:  # noqa: BLE001
-+    notify_on_challenge_create = None  # type: ignore[assignment]
-+
  
  class DynamicChallenge(Challenges):
-     __mapper_args__ = {"polymorphic_identity": "dynamic"}
-@@ -87,6 +95,17 @@ class DynamicValueChallenge(BaseChallenge):
-     )
-     challenge_model = DynamicChallenge
- 
-+    @classmethod
-+    def create(cls, request):
-+        """Entry point for creating dynamic challenges.
-+
-+        By default this method delegates to BaseChallenge.create. If the
-+        ctfd_notifier plugin is installed, this method will be wrapped in
-+        load() below with notify_on_challenge_create() so that creating a
-+        dynamic challenge sends a Telegram notification.
-+        """
-+        return super().create(request)
-+
-     @classmethod
-     def calculate_value(cls, challenge):
-         f = DECAY_FUNCTIONS.get(challenge.function, logarithmic)
-@@ -152,3 +171,17 @@ def load(app):
+@@ -152,3 +153,9 @@ def load(app):
      register_plugin_assets_directory(
          app, base_path="/plugins/dynamic_challenges/assets/"
      )
 +
-+    # If ctfd_notifier is available, wrap DynamicValueChallenge.create so that
-+    # creating a dynamic challenge triggers a Telegram notification.
-+    if notify_on_challenge_create is not None:
-+        try:
-+            original_create = getattr(DynamicValueChallenge, "create", None)
-+            if original_create is not None:
-+                # original_create is a function bound as classmethod; get the underlying function
-+                func = getattr(original_create, "__func__", original_create)
-+                wrapped = notify_on_challenge_create()(func)
-+                setattr(DynamicValueChallenge, "create", wrapped)
-+        except Exception:
-+            # Fail silently if notifier plugin is not available or wrapping fails
-+            pass
++    # Let ctfd_notifier wrap dynamic update() once the class is registered
++    try:
++        wrap_dynamic_challenge_update(app)
++    except Exception:
++        app.logger.warning("ctfd_notifier: failed to wrap dynamic challenge update()", exc_info=True)
