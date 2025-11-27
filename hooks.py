@@ -62,12 +62,10 @@ def wrap_solve(cls):
                 )
                 try:
                     text = template.format(user=user_name, challenge=name)
-                except Exception as fmt_err:
-                    current_app.logger.warning(
-                        "ctfd_notifier: first blood template format error (%s): %s; using default",
-                        type(fmt_err).__name__,
-                        fmt_err,
-                    )
+                except Exception:
+                    # Fallback if template is invalid
+                    fallback = "🩸 First Blood! ⚡️\n{user} solved {challenge}"
+                    text = fallback.format(user=user_name, challenge=name)
                     fallback = "🩸 First Blood! ⚡️\n{user} solved {challenge}"
                     text = fallback.format(user=user_name, challenge=name)
             else:
@@ -79,12 +77,8 @@ def wrap_solve(cls):
                         challenge=name,
                         num=solve_count,
                     )
-                except Exception as fmt_err:
-                    current_app.logger.warning(
-                        "ctfd_notifier: solve template format error (%s): %s; using default solve template",
-                        type(fmt_err).__name__,
-                        fmt_err,
-                    )
+                except Exception:
+                    # Fallback if template is invalid
                     fallback = "{user} solved {challenge} ({num})"
                     text = fallback.format(
                         user=user_name,
@@ -110,7 +104,7 @@ def wrap_solve(cls):
 def _wrap_challenge_update(app, type_id: str) -> None:
     """Wrap a challenge type's update() method to notify when it becomes visible."""
     try:
-        logger.info("ctfd_notifier: attempting to wrap '%s' challenge update()", type_id)
+        logger.debug("ctfd_notifier: attempting to wrap '%s' challenge update()", type_id)
         chal_cls = CHALLENGE_CLASSES.get(type_id)
         if chal_cls is None:
             app.logger.warning(
@@ -120,7 +114,7 @@ def _wrap_challenge_update(app, type_id: str) -> None:
             return
 
         original_update = getattr(chal_cls, "update", None)
-        logger.info("ctfd_notifier: original '%s' update method: %r", type_id, original_update)
+        logger.debug("ctfd_notifier: original '%s' update method: %r", type_id, original_update)
         if original_update is None:
             app.logger.warning(
                 "ctfd_notifier: '%s' challenge class has no update() method.", type_id
@@ -128,7 +122,7 @@ def _wrap_challenge_update(app, type_id: str) -> None:
             return
 
         func = getattr(original_update, "__func__", original_update)
-        logger.info("ctfd_notifier: underlying '%s' update function: %r", type_id, func)
+        logger.debug("ctfd_notifier: underlying '%s' update function: %r", type_id, func)
 
         def wrapper(cls, challenge, request, *args, **kwargs):
             old_state = getattr(challenge, "state", None)
@@ -190,10 +184,6 @@ def _wrap_challenge_update(app, type_id: str) -> None:
 
         setattr(chal_cls, "update", classmethod(wrapper))
 
-        app.logger.info(
-            "ctfd_notifier: wrapped '%s' challenge update() with Telegram notifier",
-            type_id,
-        )
     except Exception as e:  # noqa: BLE001
         try:
             app.logger.warning(

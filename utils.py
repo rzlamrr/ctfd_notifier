@@ -51,12 +51,6 @@ class TelegramConfig:
             or app.config.get("CTFD_NOTIFIER_TELEGRAM_CHAT_ID")
         )
 
-        logger.debug(
-            "ctfd_notifier: Resolved TelegramConfig(enabled=%s, bot_token_set=%s, chat_id_set=%s)",
-            enabled,
-            bool(bot_token),
-            bool(chat_id),
-        )
         return cls(enabled=enabled, bot_token=bot_token, chat_id=chat_id)
 
     def is_valid(self) -> bool:
@@ -66,16 +60,9 @@ class TelegramConfig:
 def send_telegram_message(text: str, *, thread_config_key: str | None = None) -> None:
     cfg = TelegramConfig.from_app()
     if not cfg.is_valid():
-        logger.info(
-            "ctfd_notifier: TelegramConfig invalid or disabled (enabled=%s, bot_token_set=%s, chat_id_set=%s); skipping send",
-            cfg.enabled,
-            bool(cfg.bot_token),
-            bool(cfg.chat_id),
-        )
         return
 
     try:
-        logger.info("ctfd_notifier: Sending Telegram message to chat_id=%s", cfg.chat_id)
         url = f"https://api.telegram.org/bot{cfg.bot_token}/sendMessage"
         payload = {
             "chat_id": cfg.chat_id,
@@ -95,11 +82,6 @@ def send_telegram_message(text: str, *, thread_config_key: str | None = None) ->
             if thread_id is not None:
                 payload["message_thread_id"] = thread_id
         resp = requests.post(url, json=payload, timeout=3)
-        logger.info(
-            "ctfd_notifier: Telegram API response status=%s body=%s",
-            resp.status_code,
-            resp.text[:200],
-        )
     except Exception as e:  # noqa: BLE001
         try:
             current_app.logger.warning(

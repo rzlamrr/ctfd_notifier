@@ -16,7 +16,7 @@ def load(app):
     - Wraps the standard challenge solve() so static solves send notifications.
     - Registers the admin configuration blueprint.
     """
-    logger.info("ctfd_notifier: load() called, wrapping 'standard' challenge update()/solve() and registering admin blueprint")
+    logger.debug("ctfd_notifier: load() called, wrapping 'standard' challenge update()/solve() and registering admin blueprint")
 
     wrap_standard_challenge_update(app)
 
