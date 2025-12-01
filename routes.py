@@ -33,6 +33,7 @@ def register_admin_blueprint(app) -> None:
             enabled = request.form.get("enabled", "off")
             enable_challenge = request.form.get("enable_challenge", "off")
             enable_solves = request.form.get("enable_solves", "off")
+            enable_notifications = request.form.get("enable_notifications", "off")
             debug_enabled = request.form.get("debug_enabled", "off")
             bot_token = request.form.get("bot_token", "").strip()
             chat_id = request.form.get("chat_id", "").strip()
@@ -42,10 +43,12 @@ def register_admin_blueprint(app) -> None:
             solve_limit = request.form.get("solve_limit", "").strip()
             challenge_thread_id = request.form.get("challenge_thread_id", "").strip()
             solve_thread_id = request.form.get("solve_thread_id", "").strip()
+            notification_thread_id = request.form.get("notification_thread_id", "").strip()
 
             set_config("ctfd_notifier_telegram_enabled", enabled)
             set_config("ctfd_notifier_challenge_enabled", enable_challenge)
             set_config("ctfd_notifier_solves_enabled", enable_solves)
+            set_config("ctfd_notifier_notifications_enabled", enable_notifications)
             set_config("ctfd_notifier_debug_enabled", debug_enabled)
             set_config("ctfd_notifier_telegram_bot_token", bot_token)
             set_config("ctfd_notifier_telegram_chat_id", chat_id)
@@ -58,6 +61,7 @@ def register_admin_blueprint(app) -> None:
             set_config("ctfd_notifier_solve_limit", solve_limit)
             set_config("ctfd_notifier_challenge_thread_id", challenge_thread_id)
             set_config("ctfd_notifier_solve_thread_id", solve_thread_id)
+            set_config("ctfd_notifier_notification_thread_id", notification_thread_id)
 
             db.session.commit()
             flash("CTFd Notifier settings updated", "success")
@@ -69,6 +73,8 @@ def register_admin_blueprint(app) -> None:
         challenge_enabled = str(challenge_enabled_raw).lower() in {"1", "true", "yes", "on"}
         solves_enabled_raw = get_config("ctfd_notifier_solves_enabled") or "off"
         solves_enabled = str(solves_enabled_raw).lower() in {"1", "true", "yes", "on"}
+        notifications_enabled_raw = get_config("ctfd_notifier_notifications_enabled") or "off"
+        notifications_enabled = str(notifications_enabled_raw).lower() in {"1", "true", "yes", "on"}
         debug_enabled_raw = get_config("ctfd_notifier_debug_enabled") or "off"
         debug_enabled = str(debug_enabled_raw).lower() in {"1", "true", "yes", "on"}
         bot_token = get_config("ctfd_notifier_telegram_bot_token") or ""
@@ -84,12 +90,14 @@ def register_admin_blueprint(app) -> None:
         solve_limit = get_config("ctfd_notifier_solve_limit") or ""
         challenge_thread_id = get_config("ctfd_notifier_challenge_thread_id") or ""
         solve_thread_id = get_config("ctfd_notifier_solve_thread_id") or ""
+        notification_thread_id = get_config("ctfd_notifier_notification_thread_id") or ""
 
         return render_template(
             "admin.html",
             enabled=enabled,
             challenge_enabled=challenge_enabled,
             solves_enabled=solves_enabled,
+            notifications_enabled=notifications_enabled,
             debug_enabled=debug_enabled,
             bot_token=bot_token,
             chat_id=chat_id,
@@ -99,6 +107,7 @@ def register_admin_blueprint(app) -> None:
             solve_limit=solve_limit,
             challenge_thread_id=challenge_thread_id,
             solve_thread_id=solve_thread_id,
+            notification_thread_id=notification_thread_id,
             nonce=session.get("nonce", ""),
         )
 

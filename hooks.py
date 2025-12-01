@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from functools import wraps
 from typing import Any, Callable
 
 from flask import current_app
@@ -11,6 +12,46 @@ from CTFd.utils import get_config
 from .utils import DEFAULT_MESSAGE_TEMPLATE, send_telegram_message
 
 logger = logging.getLogger(__name__)
+
+
+def event_publish_decorator(event_publish_func):
+    """Decorator to send Telegram notifications for events."""
+
+    @wraps(event_publish_func)
+    def wrapper(*args, **kwargs):
+        # Execute the original function first
+        result = event_publish_func(*args, **kwargs)
+
+        # Check if this is a notification event and notifications are enabled
+        if kwargs.get("type") == "notification":
+            notif_enabled_raw = get_config("ctfd_notifier_notifications_enabled") or "off"
+            notif_enabled = str(notif_enabled_raw).lower() in {"1", "true", "yes", "on"}
+            
+            if notif_enabled:
+                try:
+                    notification = kwargs.get("data", {}) or {}
+                    title = notification.get("title", "")
+                    content = notification.get("content", "")
+
+                    if title and content:
+                        debug_raw = get_config("ctfd_notifier_debug_enabled") or "off"
+                        debug_enabled = str(debug_raw).lower() in {"1", "true", "yes", "on"}
+                        
+                        if debug_enabled:
+                            logger.debug("Sending event notification: %s", title)
+                        
+                        # Format message for Telegram
+                        text = f"{title}\n\n{content}"
+                        send_telegram_message(text, thread_config_key="ctfd_notifier_notification_thread_id")
+                    else:
+                        logger.warning("Empty title or content in notification event")
+
+                except Exception as e:
+                    logger.error("Error in event notification: %s", str(e), exc_info=True)
+
+        return result
+
+    return wrapper
 
 
 def wrap_solve(cls):
